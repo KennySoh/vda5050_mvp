@@ -1,0 +1,21 @@
+[project]
+name = "vda5050-mvp"
+version = "0.1.0"
+description = "VDA5050 v2.1.0 master + client MVP over plain MQTT"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2",
+    "paho-mqtt>=2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+]
+
+[tool.setuptools.packages.find]
+include = ["vda5050_common*", "vda5050_master*", "vda5050_client*"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

@@ -4,7 +4,7 @@ Every term below appears verbatim in `VDA5050-V2.1.0-2025-01-1-4.pdf`
 (field name, JSON object name, topic name, enum value, or a named concept
 used in the prose/glossary). This is a **closed list** — if a word you're
 about to use isn't here, it's not spec vocabulary, it's an implementation
-choice (see §8 for examples from `README.md` that are *not* spec terms).
+choice (see §8 for examples from `docs/design_doc.md` that are *not* spec terms).
 
 ---
 
@@ -385,7 +385,7 @@ integrator
 
 An earlier `/home/kenny/rmf2.0/plan.md` (ROS 2 / `vda5050_interfaces.msg`)
 and two earlier plain-MQTT drafts have all been **deleted and
-superseded** by the single, self-sufficient `vda5050_mvp/README.md`. Its
+superseded** by the single, self-sufficient `vda5050_mvp/docs/design_doc.md`. Its
 decisions: no ROS, plain `paho-mqtt`, pydantic v2 models using verbatim
 camelCase spec field names (no alias layer), plain `Optional[X] = None`
 for optionals, corrected QoS table (`order`/`instantActions`/`state`/
@@ -396,7 +396,7 @@ the **topic they own** where that's the module's whole job
 (`orders.py`↔`order`, `state.py`↔`state`), and explicitly flag the files
 that have no spec equivalent at all (`fleet.py`, `master.py`,
 `vehicle.py`, `mqtt.py`, `main.py`). Sequence diagrams are one PlantUML
-file per demo-flow scenario under `vda5050_mvp/diagrams/`, each with a
+file per demo-flow scenario under `vda5050_mvp/docs/diagrams/`, each with a
 locally-rendered `.png` next to it, rather than embedded in the plan
 document — plus a V0/V1/V2 implementation priority.
 
@@ -452,7 +452,7 @@ mqtt.py
 time.py
 ```
 
-The `EventName` enum and every "Events:" list in `vda5050_mvp/README.md`
+The `EventName` enum and every "Events:" list in `vda5050_mvp/docs/design_doc.md`
 §9/§10 (`OrderAccepted`, `NodeReached`, `StateDirty`, …) are also our own
 logging vocabulary, not spec terms.
 
@@ -462,3 +462,31 @@ and reserve generic agent/verb names (`Fleet`, `master.py`, `vehicle.py`,
 `main`) only for the parts that genuinely have no spec equivalent — so
 it's visually obvious in code which names are "the spec" and which are
 "our architecture."
+
+## 9. A third category — borrowed from `rmf2_device_manager`, neither spec nor ours
+
+`vda5050_mvp/docs/design_doc.md` §13 documents three names that are deliberately
+**not** in either bucket above:
+
+```
+AssignmentDecision   ACCEPTED  QUEUED  REJECTED_PREFLIGHT  REJECTED_POSTFLIGHT
+OrderPhase            NO_ORDER  ACCEPTED  RUNNING  COMPLETED  FAILED
+MasterConnectionState STARTING  READY  DEGRADED  SHUTTING_DOWN
+```
+
+These aren't in the VDA5050 PDF (§8's rule still holds: if it's not in
+the closed lists above, it's not spec vocabulary) — but they're also not
+something *we* invented for this project. They're copied on purpose from
+`rmf2_device_manager`'s VDA5050 Master Device Controller design (local
+reference copies: `vda5050_mvp/docs/references/messages/msg/
+{AssignmentResult,OrderStatus,MasterConnection}.msg`), so this
+prototype's `master.py` can port forward without a rename. One
+intentional deviation from the reference: their `OrderStatus.msg` prefixes
+each phase constant (`PHASE_NO_ORDER`, `PHASE_ACCEPTED`, …) because flat
+ROS `uint8` constants need the prefix to avoid clashing; our `OrderPhase`
+enum doesn't need it (`OrderPhase.NO_ORDER` already disambiguates via the
+enum class), so the prefix is dropped — same values, shorter names.
+
+If a future change touches `master.py`'s order-lifecycle or
+connection-health logic, check `docs/design_doc.md` §13 and the referenced `.msg`
+files before inventing a fourth name for the same concept.
