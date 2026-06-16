@@ -5,9 +5,9 @@ This document describes the architecture, the modules, and the demo
 flow — read this top to bottom to understand the system before touching
 code.
 
-Spec source: `/home/kenny/rmf2.0/VDA5050-V2.1.0-2025-01-1-4.pdf`.
+Spec source: `.claude/skills/vda5050/VDA5050-V2.1.0-2025-01-1-4.pdf`.
 Terminology glossary (which words below are VDA5050 spec terms vs. our
-own naming): `/home/kenny/rmf2.0/.claude/skills/vda5050/vda5050-terminologies.md`.
+own naming): `.claude/skills/vda5050/vda5050-terminologies.md`.
 Sequence diagrams referenced throughout live in `diagrams/` as standalone
 PlantUML files with rendered PNGs next to each.
 
@@ -486,10 +486,11 @@ database — both processes are in-memory for the MVP.
 
 ```
 vda5050_mvp/
-  plan.md                     # this file — the only plan document
+  README.md                   # this file — the only plan document
   pyproject.toml
   docker-compose.yml
 
+  .claude/skills/vda5050/      # VDA5050 spec PDF + terminology glossary + this skill
   diagrams/                   # one .plantuml + rendered .png per scenario, see §9
     01_client_startup.plantuml / .png
     02_client_disconnect_unexpected.plantuml / .png
