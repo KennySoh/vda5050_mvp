@@ -1,0 +1,31 @@
+@startuml
+title Client Moves Through Nodes and Edges
+
+participant "client/main.py" as Main
+participant "client/vehicle.py" as Vehicle
+participant "client/orders.py" as Orders
+participant "client/actions.py" as Actions
+participant "client/state.py" as State
+participant "client/mqtt.py" as Mqtt
+queue "MQTT Broker" as Broker
+
+loop every tick
+  Main -> Actions : tick()
+  Actions --> Main : updated actionStates
+
+  Main -> Vehicle : tick()
+  Vehicle -> Actions : is_driving_blocked()
+  Actions --> Vehicle : false
+
+  Vehicle -> Orders : next_node()
+  Vehicle -> Vehicle : move_towards(next_node)
+  Vehicle -> Orders : has_reached_node()
+  Vehicle -> Orders : mark_node_reached(nodeId)
+
+  Orders --> Vehicle : node removed, edge removed
+  Vehicle -> Actions : start(node.actions)
+  Vehicle -> State : mark_dirty("node reached")
+  State -> Mqtt : publish_if_dirty()
+  Mqtt -> Broker : publish state
+end
+@enduml

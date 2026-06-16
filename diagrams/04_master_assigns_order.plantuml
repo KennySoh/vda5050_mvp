@@ -1,0 +1,27 @@
+@startuml
+title Master Assigns New Order
+
+actor "Demo / CLI" as User
+participant "master/master.py" as Master
+participant "master/fleet.py" as Fleet
+participant "master/orders.py" as Orders
+participant "master/mqtt.py" as MasterMqtt
+queue "MQTT Broker" as Broker
+participant "client/mqtt.py" as ClientMqtt
+participant "client/orders.py" as ClientOrders
+participant "client/state.py" as ClientState
+
+User -> Master : assign_order(agv_id, waypoints)
+Master -> Fleet : find_agv(agv_id)
+Master -> Orders : build_order(agv, waypoints)
+Orders --> Master : Order
+Master -> MasterMqtt : publish_order(agv, order)
+MasterMqtt -> Broker : publish order
+
+Broker --> ClientMqtt : order
+ClientMqtt -> ClientOrders : accept_or_reject(order)
+ClientOrders --> ClientMqtt : accepted
+ClientMqtt -> ClientOrders : apply_order(order)
+ClientMqtt -> ClientState : mark_dirty("order accepted")
+ClientMqtt -> Broker : publish state
+@enduml

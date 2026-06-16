@@ -1,0 +1,15 @@
+@startuml
+title Client Disconnects Unexpectedly (Connection Broken)
+
+participant "client/mqtt.py" as ClientMqtt
+queue "MQTT Broker" as Broker
+participant "master/mqtt.py" as MasterMqtt
+participant "master/fleet.py" as Fleet
+participant "master/master.py" as Master
+
+ClientMqtt -> Broker : unexpected disconnect
+Broker --> MasterMqtt : connection=CONNECTIONBROKEN
+MasterMqtt -> Fleet : record_connection(CONNECTIONBROKEN)
+MasterMqtt -> Master : on_connection(agv, connection)
+Master -> Fleet : mark_unreachable(agv)
+@enduml

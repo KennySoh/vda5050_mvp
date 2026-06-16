@@ -1,0 +1,22 @@
+@startuml
+title Order Completed
+
+participant "client/orders.py" as ClientOrders
+participant "client/actions.py" as ClientActions
+participant "client/state.py" as ClientState
+queue "MQTT Broker" as Broker
+participant "master/mqtt.py" as MasterMqtt
+participant "master/fleet.py" as Fleet
+participant "master/master.py" as Master
+
+ClientOrders -> ClientOrders : nodeStates empty
+ClientOrders -> ClientOrders : edgeStates empty
+ClientActions -> ClientActions : all actions terminal
+ClientState -> Broker : publish final state
+
+Broker --> MasterMqtt : state
+MasterMqtt -> Fleet : record_state(state)
+MasterMqtt -> Master : on_state(agv, state)
+Master -> Master : detect order completed
+Master -> Fleet : clear_current_order(agv)
+@enduml

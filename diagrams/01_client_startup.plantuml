@@ -1,0 +1,21 @@
+@startuml
+title Client Startup / Connected
+
+participant "client/main.py" as ClientMain
+participant "client/mqtt.py" as ClientMqtt
+queue "MQTT Broker" as Broker
+participant "master/mqtt.py" as MasterMqtt
+participant "master/fleet.py" as Fleet
+
+ClientMain -> ClientMqtt : start()
+ClientMqtt -> Broker : connect()
+ClientMqtt -> Broker : publish connection=ONLINE
+ClientMqtt -> Broker : publish factsheet retained
+
+Broker --> MasterMqtt : connection ONLINE
+MasterMqtt -> Fleet : get_or_create(manufacturer, serialNumber)
+MasterMqtt -> Fleet : record_connection(connection)
+
+Broker --> MasterMqtt : factsheet
+MasterMqtt -> Fleet : record_factsheet(factsheet)
+@enduml

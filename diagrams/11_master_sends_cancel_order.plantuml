@@ -1,0 +1,25 @@
+@startuml
+title Master Sends cancelOrder
+
+actor "Demo / CLI" as User
+participant "master/master.py" as Master
+participant "master/orders.py" as Orders
+participant "master/mqtt.py" as MasterMqtt
+queue "MQTT Broker" as Broker
+participant "client/mqtt.py" as ClientMqtt
+participant "client/orders.py" as ClientOrders
+participant "client/actions.py" as Actions
+participant "client/state.py" as State
+
+User -> Master : cancel_order(agv)
+Master -> Orders : build_instant_actions(cancelOrder)
+Orders --> Master : InstantActions
+Master -> MasterMqtt : publish_instant_actions()
+MasterMqtt -> Broker : publish instantActions
+
+Broker --> ClientMqtt : instantActions
+ClientMqtt -> ClientOrders : cancel_order()
+ClientMqtt -> Actions : fail_all_running()
+ClientMqtt -> State : mark_dirty("order cancelled")
+ClientMqtt -> Broker : publish state
+@enduml

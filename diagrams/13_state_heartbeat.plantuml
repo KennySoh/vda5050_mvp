@@ -1,0 +1,19 @@
+@startuml
+title State Heartbeat
+
+participant "client/main.py" as Main
+participant "client/state.py" as State
+participant "client/mqtt.py" as Mqtt
+queue "MQTT Broker" as Broker
+
+loop every tick
+  Main -> State : should_publish()
+  alt dirty or heartbeat expired
+    State -> State : build()
+    State -> Mqtt : publish_state(state)
+    Mqtt -> Broker : publish state
+  else nothing changed
+    Main -> Main : do nothing
+  end
+end
+@enduml

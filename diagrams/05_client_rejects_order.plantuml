@@ -1,0 +1,28 @@
+@startuml
+title Client Rejects Order
+
+participant "master/mqtt.py" as MasterMqtt
+queue "MQTT Broker" as Broker
+participant "client/mqtt.py" as ClientMqtt
+participant "client/orders.py" as ClientOrders
+participant "client/state.py" as ClientState
+participant "master/master.py" as Master
+
+MasterMqtt -> Broker : publish invalid order
+Broker --> ClientMqtt : order
+ClientMqtt -> ClientOrders : accept_or_reject(order)
+ClientOrders --> ClientMqtt : rejected(reason)
+ClientMqtt -> ClientState : add_error(orderError)
+ClientMqtt -> ClientState : mark_dirty("order rejected")
+ClientMqtt -> Broker : publish state with error
+
+Broker --> Master : state with error
+
+note right of ClientOrders
+  V0 rejection reasons:
+  - wrong orderUpdateId
+  - already executing another order
+  - invalid node/edge sequence
+  - first node not reachable
+end note
+@enduml

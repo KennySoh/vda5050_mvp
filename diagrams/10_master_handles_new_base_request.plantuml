@@ -1,0 +1,16 @@
+@startuml
+title Master Handles newBaseRequest (V1/V2)
+
+participant "client/state.py" as ClientState
+queue "MQTT Broker" as Broker
+participant "master/mqtt.py" as MasterMqtt
+participant "master/master.py" as Master
+participant "master/orders.py" as Orders
+
+ClientState -> Broker : publish state newBaseRequest=true
+Broker --> MasterMqtt : state
+MasterMqtt -> Master : on_state(agv, state)
+Master -> Orders : build_order_update(agv, next_waypoints)
+Orders --> Master : Order update
+Master -> MasterMqtt : publish_order(agv, order_update)
+@enduml

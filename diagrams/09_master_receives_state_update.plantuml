@@ -1,0 +1,22 @@
+@startuml
+title Master Receives Normal State Update
+
+queue "MQTT Broker" as Broker
+participant "master/mqtt.py" as MasterMqtt
+participant "master/fleet.py" as Fleet
+participant "master/master.py" as Master
+
+Broker --> MasterMqtt : state
+MasterMqtt -> Fleet : record_state(state)
+MasterMqtt -> Master : on_state(agv, state)
+
+alt order completed
+  Master -> Fleet : clear_current_order(agv)
+else newBaseRequest true
+  Master -> Master : plan next base segment
+else state has errors
+  Master -> Master : handle_order_error()
+else normal progress
+  Master -> Fleet : update progress only
+end
+@enduml

@@ -1,0 +1,24 @@
+@startuml
+title Order Update / Stitching Node (V2)
+
+participant "master/master.py" as Master
+participant "master/orders.py" as Orders
+participant "client/mqtt.py" as ClientMqtt
+participant "client/orders.py" as ClientOrders
+participant "client/state.py" as State
+
+Master -> Orders : build_order_update(new_waypoints)
+Orders -> Orders : include stitching node
+Orders -> Orders : increment orderUpdateId
+Orders --> Master : updated Order
+
+Master -> ClientMqtt : publish order update
+ClientMqtt -> ClientOrders : accept_or_reject(order_update)
+
+alt stitching valid
+  ClientOrders -> ClientOrders : append new base/horizon
+  ClientOrders -> State : mark_dirty("order update accepted")
+else stitching invalid
+  ClientOrders -> State : add_error("stitching failed")
+end
+@enduml

@@ -1,0 +1,11 @@
+@startuml
+title Client Graceful Shutdown
+
+participant "client/main.py" as ClientMain
+participant "client/mqtt.py" as ClientMqtt
+queue "MQTT Broker" as Broker
+
+ClientMain -> ClientMqtt : stop()
+ClientMqtt -> Broker : publish connection=OFFLINE
+ClientMqtt -> Broker : disconnect()
+@enduml

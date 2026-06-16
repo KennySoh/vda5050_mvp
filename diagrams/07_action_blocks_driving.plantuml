@@ -1,0 +1,18 @@
+@startuml
+title Action Blocks Driving
+
+participant "client/vehicle.py" as Vehicle
+participant "client/actions.py" as Actions
+participant "client/state.py" as State
+
+Vehicle -> Actions : is_driving_blocked()
+Actions --> Vehicle : true
+Vehicle -> Vehicle : skip movement this tick
+Actions -> Actions : tick action lifecycle
+Actions -> State : mark_dirty("action updated")
+
+note right of Actions
+  V0: NONE = driving continues
+  SOFT / HARD = driving blocked
+end note
+@enduml
