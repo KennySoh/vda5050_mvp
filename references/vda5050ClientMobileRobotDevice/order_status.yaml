@@ -1,0 +1,215 @@
+# OrderStatus — per-AGV order execution lifecycle, published by the master.
+#
+# Topic:     /<topic_namespace>/<manufacturer>/<serial_number>/order_status
+# QoS:       RELIABLE + TRANSIENT_LOCAL (latched)
+# Direction: master -> downstream consumers (RES, MAPF, dashboards)
+#
+# Published on every State arrival. Also available via GetOrderStatus service.
+#
+# phase values:
+#   0 = PHASE_NO_ORDER  — AGV onboarded, no active order
+#   1 = PHASE_ACCEPTED  — order published; AGV not yet at first node
+#   2 = PHASE_RUNNING   — AGV traversing nodes/executing actions
+#   3 = PHASE_COMPLETED — AGV reached final base node
+#   4 = PHASE_FAILED    — FATAL error in State.errors[]
+#
+# assignment_id: echoed from AssignOrderRequest; empty if order arrived via
+#                synchronous AssignOrder service (not correlation-aware in V0)
+
+---
+# UseCase 1a — Phase 1: Order accepted, AMR1-Reeman not yet at first node (PHASE_ACCEPTED)
+manufacturer: "Reeman"
+serial_number: "AMR1"
+assignment_id: "asgn-uc1a-reeman-amr1-001"
+stamp:
+  sec: 1748419202
+  nanosec: 0
+
+order_id: "order-uc1a-2026-001"
+order_update_id: 0
+phase: 1              # PHASE_ACCEPTED
+
+last_node_id: ""
+last_node_sequence_id: 0
+
+nodes_in_base: 5
+nodes_in_horizon: 0
+
+driving: false
+paused: false
+new_base_request: false
+pending_stitch_count: 0
+
+action_states: []
+errors: []
+
+---
+# UseCase 1a — Phase 2a: PHASE_RUNNING — AMR1-Reeman driving on E1 toward Storage-Pickup-Dock-01
+manufacturer: "Reeman"
+serial_number: "AMR1"
+assignment_id: "asgn-uc1a-reeman-amr1-001"
+stamp:
+  sec: 1748419265
+  nanosec: 500000000
+
+order_id: "order-uc1a-2026-001"
+order_update_id: 0
+phase: 2              # PHASE_RUNNING
+
+last_node_id: "Storage-Pickup-PreDock-01"
+last_node_sequence_id: 0
+
+nodes_in_base: 5
+nodes_in_horizon: 0
+
+driving: true
+paused: false
+new_base_request: false
+pending_stitch_count: 0
+
+action_states: []
+errors: []
+
+---
+# UseCase 1a — Phase 2b: PHASE_RUNNING — AMR1-Reeman transiting on E2 with storage cart
+manufacturer: "Reeman"
+serial_number: "AMR1"
+assignment_id: "asgn-uc1a-reeman-amr1-001"
+stamp:
+  sec: 1748419515
+  nanosec: 0
+
+order_id: "order-uc1a-2026-001"
+order_update_id: 0
+phase: 2              # PHASE_RUNNING
+
+last_node_id: "Storage-Pickup-Dock-01"
+last_node_sequence_id: 2
+
+nodes_in_base: 5
+nodes_in_horizon: 0
+
+driving: true
+paused: false
+new_base_request: false
+pending_stitch_count: 0
+
+action_states:
+  - action_id: "act-dock-pickup-001"
+    action_type: "dock"
+    action_status: "FINISHED"
+    result_description: "Docked at Storage-Pickup-Dock-01"
+  - action_id: "act-pick-001"
+    action_type: "pick"
+    action_status: "FINISHED"
+    result_description: "Storage cart cart-uc1a-001 picked successfully"
+  - action_id: "act-undock-pickup-001"
+    action_type: "undock"
+    action_status: "FINISHED"
+    result_description: "Undocked from Storage-Pickup-Dock-01"
+
+errors: []
+
+---
+# UseCase 1a — Phase 3: PHASE_COMPLETED — AMR1-Reeman reached Reeman-ChargingPoint-01
+manufacturer: "Reeman"
+serial_number: "AMR1"
+assignment_id: "asgn-uc1a-reeman-amr1-001"
+stamp:
+  sec: 1748419800
+  nanosec: 0
+
+order_id: "order-uc1a-2026-001"
+order_update_id: 0
+phase: 3              # PHASE_COMPLETED
+
+last_node_id: "Reeman-ChargingPoint-01"
+last_node_sequence_id: 8
+
+nodes_in_base: 5
+nodes_in_horizon: 0
+
+driving: false
+paused: false
+new_base_request: false
+pending_stitch_count: 0
+
+action_states:
+  - action_id: "act-dock-pickup-001"
+    action_type: "dock"
+    action_status: "FINISHED"
+    result_description: "Docked at Storage-Pickup-Dock-01"
+  - action_id: "act-pick-001"
+    action_type: "pick"
+    action_status: "FINISHED"
+    result_description: "Storage cart cart-uc1a-001 picked successfully"
+  - action_id: "act-undock-pickup-001"
+    action_type: "undock"
+    action_status: "FINISHED"
+    result_description: "Undocked from Storage-Pickup-Dock-01"
+  - action_id: "act-dock-dropoff-001"
+    action_type: "dock"
+    action_status: "FINISHED"
+    result_description: "Docked at LabAuto-Dropoff-Dock-01"
+  - action_id: "act-drop-001"
+    action_type: "drop"
+    action_status: "FINISHED"
+    result_description: "Storage cart cart-uc1a-001 dropped at LabAuto-Dropoff-Dock-01"
+  - action_id: "act-undock-dropoff-001"
+    action_type: "undock"
+    action_status: "FINISHED"
+    result_description: "Undocked from LabAuto-Dropoff-Dock-01"
+  - action_id: "act-charge-001"
+    action_type: "startCharging"
+    action_status: "FINISHED"
+    result_description: "Charging initiated at Reeman-ChargingPoint-01"
+
+errors: []
+
+---
+# Example 5: PHASE_FAILED — FATAL navigation error on E2 (obstacle not cleared)
+manufacturer: "Reeman"
+serial_number: "AMR1"
+assignment_id: "asgn-uc1a-reeman-amr1-001"
+stamp:
+  sec: 1748419650
+  nanosec: 0
+
+order_id: "order-uc1a-2026-001"
+order_update_id: 0
+phase: 4              # PHASE_FAILED
+
+last_node_id: "Storage-Pickup-Dock-01"
+last_node_sequence_id: 2
+
+nodes_in_base: 5
+nodes_in_horizon: 0
+
+driving: false
+paused: false
+new_base_request: false
+pending_stitch_count: 0
+
+action_states:
+  - action_id: "act-dock-pickup-001"
+    action_type: "dock"
+    action_status: "FINISHED"
+    result_description: "Docked at Storage-Pickup-Dock-01"
+  - action_id: "act-pick-001"
+    action_type: "pick"
+    action_status: "FINISHED"
+    result_description: "Storage cart cart-uc1a-001 picked successfully"
+  - action_id: "act-undock-pickup-001"
+    action_type: "undock"
+    action_status: "FINISHED"
+    result_description: "Undocked from Storage-Pickup-Dock-01"
+
+errors:
+  - error_type: "NAVIGATION_FAILED"
+    error_description: "AMR1 unable to navigate edge E2 — path blocked by persistent obstacle after timeout."
+    error_level: "FATAL"
+    error_references:
+      - reference_key: "edgeId"
+        reference_value: "E2"
+      - reference_key: "orderId"
+        reference_value: "order-uc1a-2026-001"

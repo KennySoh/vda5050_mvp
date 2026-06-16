@@ -1,0 +1,42 @@
+# Connection — AGV connection state published by the AGV (or broker last-will).
+#
+# Topic (MQTT): <manufacturer>/<serialNumber>/connection
+# Topic (ROS2): /<topic_namespace>/<manufacturer>/<serial_number>/connection
+# QoS (ROS2):  RELIABLE + TRANSIENT_LOCAL (latched)
+# Direction:   AGV -> MQTT broker -> master
+#
+# The AGV publishes ONLINE on connect and OFFLINE on clean disconnect.
+# The broker publishes CONNECTIONBROKEN via MQTT last-will on unexpected drop.
+#
+# connection_state values: ONLINE | OFFLINE | CONNECTIONBROKEN
+
+---
+# UseCase 1a: Reeman AMR1 connected and online — mission started
+header:
+  header_id: 1
+  timestamp: "2026-05-21T07:59:55.00Z"
+  version: "2.0.0"
+  manufacturer: "Reeman"
+  serial_number: "AMR1"
+connection_state: "ONLINE"
+
+---
+# Example 2: Reeman AMR1 disconnecting cleanly after end-of-shift
+header:
+  header_id: 2
+  timestamp: "2026-05-21T18:00:00.00Z"
+  version: "2.0.0"
+  manufacturer: "Reeman"
+  serial_number: "AMR1"
+connection_state: "OFFLINE"
+
+---
+# Example 3: Connection broken unexpectedly — published via MQTT last-will
+# (The broker sends this pre-registered message if AMR1 drops without notice)
+header:
+  header_id: 0
+  timestamp: "2026-05-21T10:32:15.00Z"
+  version: "2.0.0"
+  manufacturer: "Reeman"
+  serial_number: "AMR1"
+connection_state: "CONNECTIONBROKEN"

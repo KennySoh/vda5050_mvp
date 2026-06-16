@@ -107,9 +107,9 @@ using this wrapper).
 
 | Module | Responsibility | Owns the MQTT connection? | Maps to |
 |---|---|---|---|
-| `fleet.py` | Tracks all known AGVs. `Agv` (one per AGV: `manufacturer`, `serialNumber`, `latestState`, `latestConnection`, `latestFactsheet`, `currentOrderId`, `currentOrderUpdateId`). `Fleet.get_or_create(manufacturer, serialNumber)`, `.record_state(agv, state)`, `.record_connection(agv, connection)`, `.record_factsheet(agv, factsheet)`, `.clear_current_order(agv)`, `.mark_unreachable(agv)`. | No | spec noun **AGV** + the `Connection`/`Factsheet`/`State` it stores. `Fleet`/`mark_unreachable`/`clear_current_order` are invented — the spec never describes how a master tracks multiple AGVs internally. |
+| `fleet.py` | Tracks all known AGVs. `Agv` (one per AGV: `manufacturer`, `serialNumber`, `latestState`, `latestConnection`, `latestFactsheet`, `currentOrderId`, `currentOrderUpdateId`). `Fleet.get_or_create(manufacturer, serialNumber)`, `.record_state(agv, state)`, `.record_connection(agv, connection)`, `.record_factsheet(agv, factsheet)`, `.clear_current_order(agv)`, `.mark_unreachable(agv)`. `Agv` is the same role as rmf2_device_manager's per-AGV "MobileRobotDevice" proxy — see §13. | No | spec noun **AGV** + the `Connection`/`Factsheet`/`State` it stores. `Fleet`/`mark_unreachable`/`clear_current_order` are invented — the spec never describes how a master tracks multiple AGVs internally. |
 | `orders.py` | Pure construction of outbound messages — **no sending, no decisions**. `build_order(agv, waypoints) -> Order`, `build_order_update(agv, new_waypoints) -> Order` (orderId/orderUpdateId increment, `sequenceId` assignment, base/horizon split, stitching-node rule), `build_instant_actions(agv, action_type, params=None) -> InstantActions`. | No | `Order`, `Node`, `Edge`, `sequenceId`, `InstantActions`, `Action`. Function names are invented. |
-| `master.py` | The decision brain. `assign_order(agv_id, waypoints)`, `cancel_order(agv)`, `on_state(agv, state)` (checks completion → `newBaseRequest` → error → else record progress, in that order), `on_connection(agv, connection)`, `on_factsheet(agv, factsheet)`. Calls into `fleet.py` (read/update records), `orders.py` (build messages), and `mqtt.py`'s publish functions (send them) — but never touches the socket itself. | No (calls `mqtt.py`'s `publish_order`/`publish_instant_actions`, doesn't manage the connection) | `State`, `Connection`, `Factsheet`, `newBaseRequest`. All function names invented — the spec has no concept of a "decision brain," only the messages it reacts to. |
+| `master.py` | The decision brain. `assign_order(agv_id, waypoints) -> (assignment_id, AssignmentDecision)`, `cancel_order(agv)`, `on_state(agv, state)` (checks completion → `newBaseRequest` → error → else record progress, in that order; also derives each AGV's `OrderPhase`), `on_connection(agv, connection)`, `on_factsheet(agv, factsheet)`. Also tracks the master's own `MasterConnectionState` (its MQTT-connectivity health, not any AGV's). Calls into `fleet.py` (read/update records), `orders.py` (build messages), and `mqtt.py`'s publish functions (send them) — but never touches the socket itself. `AssignmentDecision`/`OrderPhase`/`MasterConnectionState` are borrowed from rmf2_device_manager's VDA5050 Master Device Controller design — see §13. | No (calls `mqtt.py`'s `publish_order`/`publish_instant_actions`, doesn't manage the connection) | `State`, `Connection`, `Factsheet`, `newBaseRequest`. All function names invented — the spec has no concept of a "decision brain," only the messages it reacts to. |
 | `mqtt.py` | **Only** module that owns the MQTT connection. Subscribes to `state`/`connection`/`factsheet`; parses incoming JSON into pydantic models; forwards to `fleet.py` (always) and `master.py` (for `on_state`/`on_connection`/`on_factsheet`); exposes `publish_order(agv, order)` / `publish_instant_actions(agv, actions)` for `master.py` to call. | **Yes** | no spec equivalent — pure transport |
 | `main.py` | Creates `Fleet`, `Master`, the MQTT adapter; starts the MQTT loop; provides a demo CLI / hardcoded order. | No (delegates to `mqtt.py`) | no spec equivalent |
 
@@ -482,7 +482,81 @@ database — both processes are in-memory for the MVP.
 
 ---
 
-## 13. Folder tree
+## 13. Correspondence to rmf2_device_manager's VDA5050 Master Device Controller
+
+`rmf2_device_manager/docs/brainstorm/vda5050/` (a sibling project in this
+repo) is designing a ROS2-based **VDA5050 Master Device Controller**
+("MDC") that sits between a higher-level orchestrator (RES/DM) and real
+AGVs. This MVP plays a smaller, ROS-free subset of that same role — no
+RES/DM layer, no ROS2 — but the master/AGV-tracking shapes below are
+borrowed deliberately so a future port is closer to a rename than a
+redesign. Local copies of the relevant reference files live in
+`references/` in this repo (see §14) so this project doesn't depend on
+the sibling repo being checked out alongside it.
+
+| Our piece | rmf2_device_manager equivalent | Local reference copy |
+|---|---|---|
+| `vda5050_master` package | the MDC itself, minus the RES/DM-facing ROS topics | `references/vda5050MasterDeviceController/` |
+| `fleet.py`'s `Agv` | the MDC's internal per-AGV "MobileRobotDevice" proxy | `references/vda5050ClientMobileRobotDevice/` |
+| `vda5050_client` package | the real/simulated AGV the MDC talks to over MQTT (not modeled as a separate component in their docs — it's just "the AGV" in their sequence diagram) | — |
+| `master.assign_order()`'s return value | `AssignmentResult` | `references/messages/msg/AssignmentResult.msg` |
+| master's derived per-AGV order phase | `OrderStatus` | `references/messages/msg/OrderStatus.msg` |
+| master's own health (distinct from any AGV's `connection`) | `MasterConnection` | `references/messages/msg/MasterConnection.msg` |
+| multi-AGV onboarding (future, not built yet) | `FleetRoster` / `AGVOnboardSpec` / `AGVKey` (full-state roster diff: present-but-not-local → onboard, local-but-not-present → offboard) | `references/messages/msg/FleetRoster.msg`, `AGVOnboardSpec.msg`, `AGVKey.msg` |
+
+These four names — `AssignmentDecision`, `OrderPhase`,
+`MasterConnectionState`, and (later) the roster shapes — are **not**
+VDA5050 spec terms (they don't appear in the PDF) and they're also not
+"our own invented" naming in the usual sense of this document: they're
+rmf2_device_manager's own device-controller-contract vocabulary, adopted
+here on purpose for forward-compatibility. We use them as plain Python
+`enum`/dataclasses in `master.py`, not ROS2 `.msg` types — the reference
+project uses snake_case fields and `uint8` enum constants (ROS
+convention); we keep their field/enum *names* but represent enums as
+string `Enum`s, consistent with the rest of this codebase:
+
+```python
+class AssignmentDecision(str, Enum):
+    ACCEPTED = "ACCEPTED"
+    QUEUED = "QUEUED"                           # V2 — needs the stitch queue, §9.11
+    REJECTED_PREFLIGHT = "REJECTED_PREFLIGHT"
+    REJECTED_POSTFLIGHT = "REJECTED_POSTFLIGHT"  # reserved — not emitted yet, same as the reference
+
+class OrderPhase(str, Enum):
+    NO_ORDER = "NO_ORDER"
+    ACCEPTED = "ACCEPTED"
+    RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+
+class MasterConnectionState(str, Enum):
+    STARTING = "STARTING"
+    READY = "READY"
+    DEGRADED = "DEGRADED"
+    SHUTTING_DOWN = "SHUTTING_DOWN"
+```
+
+- `master.assign_order()` returns an `assignment_id` (caller-correlatable,
+  same convention as the reference's UUID) plus an `AssignmentDecision` —
+  V0/V1 only ever produce `ACCEPTED`/`REJECTED_PREFLIGHT`; `QUEUED` and
+  `REJECTED_POSTFLIGHT` are V2, once order-update/stitching (§9.11)
+  exists to make them meaningful.
+- `master.py` derives `OrderPhase` per AGV from `State` the same way the
+  reference's `OrderLifecycleManager` does: `NO_ORDER` when there's no
+  current order, `ACCEPTED` once sent but the AGV isn't at the first node
+  yet, `RUNNING` once driving/acting, `COMPLETED` on the existing
+  completion rule (§9.7), `FAILED` on any `FATAL` error in `State.errors`.
+  This replaces a bare "is it complete yet?" boolean with the same
+  five-value phase the reference design uses.
+- `master.py` also tracks its own `MasterConnectionState` — `STARTING` on
+  boot, `READY` once the MQTT client connects, `DEGRADED` on broker
+  disconnect, `SHUTTING_DOWN` on graceful exit. This is new: earlier
+  revisions of this plan only tracked each *AGV's* `connection_state`,
+  never the master's own MQTT-connectivity health.
+
+---
+
+## 14. Folder tree
 
 ```
 vda5050_mvp/
@@ -491,6 +565,19 @@ vda5050_mvp/
   docker-compose.yml
 
   .claude/skills/vda5050/      # VDA5050 spec PDF + terminology glossary + this skill
+  references/                 # local copies of rmf2_device_manager's VDA5050
+                               # MDC brainstorm docs, see §13
+    messages/
+      msg/                     # AssignOrderRequest, AssignmentResult, FleetRoster,
+                               # AGVOnboardSpec, AGVKey, MasterConnection,
+                               # OrderStatus, DeviceStatus, AgvAlignment*
+      types/                   # raw VDA5050 types as ROS2-style .hpp (snake_case)
+    vda5050MasterDeviceController/    # master-side YAML examples (assign_order_request,
+                               # assignment_results, fleet_roster, instant_action*,
+                               # master_connection)
+    vda5050ClientMobileRobotDevice/   # per-AGV YAML examples (connection, state,
+                               # factsheet, device_status, order_status,
+                               # instant_action_status)
   diagrams/                   # one .plantuml + rendered .png per scenario, see §9
     01_client_startup.plantuml / .png
     02_client_disconnect_unexpected.plantuml / .png

@@ -1,0 +1,71 @@
+# AssignmentResult — outcome of one AssignOrderRequest.
+#
+# Topic:     /<topic_namespace>/assignment_results
+# QoS:       RELIABLE + VOLATILE, history KEEP_LAST(10)
+# Direction: master -> caller
+#
+# decision values:
+#   0 = ACCEPTED        — validators passed; order handed to AGV queue
+#   1 = QUEUED          — validators passed but stitch not yet possible
+#   2 = REJECTED_PREFLIGHT — synchronous validator failed at dispatch time
+#   3 = REJECTED_POSTFLIGHT — earlier ACCEPTED/QUEUED invalidated (reserved V0)
+
+---
+# UseCase 1a: Order accepted — all validators passed, queued to Reeman AMR1
+assignment_id: "asgn-uc1a-reeman-amr1-001"
+order_id: "order-uc1a-2026-001"
+order_update_id: 0
+decision: 0           # ACCEPTED
+errors: []
+stamp:
+  sec: 1748419201
+  nanosec: 500000000
+
+---
+# Example 2: Order queued — stitch conditions not yet met (AMR1 still at pickup dock)
+assignment_id: "asgn-uc1a-reeman-amr1-002"
+order_id: "order-uc1a-2026-002"
+order_update_id: 0
+decision: 1           # QUEUED
+errors: []
+stamp:
+  sec: 1748421001
+  nanosec: 0
+
+---
+# Example 3: Order rejected preflight — AGV not onboarded
+assignment_id: "asgn-uc1a-reeman-amr2-001"
+order_id: "order-uc1a-2026-003"
+order_update_id: 0
+decision: 2           # REJECTED_PREFLIGHT
+errors:
+  - error_type: "AGV_NOT_ONBOARDED"
+    error_description: "No AGV with manufacturer='Reeman' serial='AMR2' is currently onboarded."
+    error_level: "FATAL"
+    error_references:
+      - reference_key: "manufacturer"
+        reference_value: "Reeman"
+      - reference_key: "serialNumber"
+        reference_value: "AMR2"
+stamp:
+  sec: 1748421300
+  nanosec: 0
+
+---
+# Example 4: Order rejected preflight — edge speed exceeds Reeman AMR1 factsheet speedMax
+assignment_id: "asgn-uc1a-reeman-amr1-003"
+order_id: "order-uc1a-2026-004"
+order_update_id: 0
+decision: 2           # REJECTED_PREFLIGHT
+errors:
+  - error_type: "TRAVERSABILITY_ERROR"
+    error_description: "Edge E2 max_speed=2.0 exceeds Reeman AMR1 factsheet speedMax=1.2 m/s."
+    error_level: "FATAL"
+    error_references:
+      - reference_key: "edgeId"
+        reference_value: "E2"
+      - reference_key: "orderId"
+        reference_value: "order-uc1a-2026-004"
+stamp:
+  sec: 1748421600
+  nanosec: 0

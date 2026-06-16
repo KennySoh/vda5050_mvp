@@ -1,0 +1,62 @@
+# MasterConnection — master's own operational state, latched for DM readiness detection.
+#
+# Topic:     /<topic_namespace>/master_connection
+# QoS:       RELIABLE + TRANSIENT_LOCAL (latched)
+# Direction: master -> DM and other ROS 2 consumers
+#
+# Publish triggers:
+#   - Startup → state=STARTING, then state=READY once MQTT broker connects
+#   - MQTT disconnect → state=DEGRADED
+#   - MQTT reconnect  → state=READY
+#   - Shutdown        → state=SHUTTING_DOWN (best-effort)
+#   - Heartbeat every 30 s republishes current state
+#
+# state values:
+#   0 = STARTING      — process up, subsystems initializing
+#   1 = READY         — broker connected, ready to accept rosters
+#   2 = DEGRADED      — broker disconnected; queued ops will buffer
+#   3 = SHUTTING_DOWN — graceful shutdown in progress
+
+---
+# UseCase 1a: Master fully operational — Reeman AMR1 onboarded, mission active
+stamp:
+  sec: 1748419205
+  nanosec: 0
+state: 1                  # READY
+master_id: "vda5050_master_primary"
+master_version: "vda5050_master_ros2-2.0.0"
+broker_connected: true
+onboarded_agv_count: 1
+
+---
+# Example 2: Master starting up — MQTT connection not yet established
+stamp:
+  sec: 1748419200
+  nanosec: 0
+state: 0                  # STARTING
+master_id: "vda5050_master_primary"
+master_version: "vda5050_master_ros2-2.0.0"
+broker_connected: false
+onboarded_agv_count: 0
+
+---
+# Example 3: MQTT broker disconnected mid-mission — master degraded but buffering
+stamp:
+  sec: 1748422800
+  nanosec: 0
+state: 2                  # DEGRADED
+master_id: "vda5050_master_primary"
+master_version: "vda5050_master_ros2-2.0.0"
+broker_connected: false
+onboarded_agv_count: 1    # AMR1 still tracked locally; messages queued
+
+---
+# Example 4: Heartbeat republish — steady state, two Reeman robots onboarded
+stamp:
+  sec: 1748421030
+  nanosec: 0
+state: 1                  # READY
+master_id: "vda5050_master_primary"
+master_version: "vda5050_master_ros2-2.0.0"
+broker_connected: true
+onboarded_agv_count: 2

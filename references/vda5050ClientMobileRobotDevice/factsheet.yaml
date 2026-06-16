@@ -1,0 +1,271 @@
+# Factsheet — AGV capabilities, limits, and physical properties.
+#
+# Topic (MQTT): <manufacturer>/<serialNumber>/factsheet
+# Topic (ROS2): /<topic_namespace>/<manufacturer>/<serial_number>/factsheet
+# Direction:    AGV -> MQTT broker -> master
+#
+# Published once on connect and whenever the AGV configuration changes.
+# The master caches the latest factsheet and uses it for:
+#   - traversability validation (speedMax vs edge max_speed)
+#   - alignment checks (mapId, mapVersion)
+#
+# agv_kinematic: DIFF | OMNI | THREEWHEEL
+# agv_class:     FORKLIFT | CONVEYOR | TUGGER | CARRIER
+# support:       SUPPORTED | REQUIRED | NOT_SUPPORTED (optional_parameters)
+
+---
+# UseCase 1a: Reeman AMR1 — differential-drive carrier robot for storage cart handling
+header:
+  header_id: 1
+  timestamp: "2026-05-21T07:59:56.00Z"
+  version: "2.0.0"
+  manufacturer: "Reeman"
+  serial_number: "AMR1"
+
+type_specification:
+  series_name: "Reeman AMR-Series"
+  series_description: "Autonomous Mobile Robot for laboratory material handling and inventory replenishment"
+  agv_kinematic: "DIFF"
+  agv_class: "CARRIER"
+  max_load_mass: 100.0          # kg — storage cart
+  localization_types:
+    - "NATURAL"
+    - "REFLECTOR"
+  navigation_types:
+    - "AUTONOMOUS"
+
+physical_parameters:
+  speed_min: 0.05
+  speed_max: 1.2
+  acceleration_max: 0.5
+  deceleration_max: 0.8
+  height_min: 0.20
+  height_max: 0.40              # with storage cart loaded
+  width: 0.55
+  length: 0.90
+  angular_speed_min: 0.05
+  angular_speed_max: 0.8
+
+protocol_limits:
+  max_string_lens:
+    msg_len: 65535
+    topic_serial_len: 64
+    topic_elem_len: 64
+    id_len: 128
+    enum_len: 32
+    load_id_len: 64
+    id_numerical_only: false
+  max_array_lens:
+    order_nodes: 50
+    order_edges: 50
+    node_actions: 10
+    edge_actions: 5
+    actions_actions_parameters: 10
+    instant_actions: 10
+    state_node_states: 50
+    state_edge_states: 50
+  timing:
+    min_order_interval: 0.5
+    min_state_interval: 1.0
+    default_state_interval: 1.0
+    visualization_interval: 1.0
+
+protocol_features:
+  optional_parameters:
+    - parameter: "order.nodes.nodePosition.allowedDeviationTheta"
+      support: "SUPPORTED"
+      description: "AMR1 uses theta deviation for docking alignment"
+    - parameter: "order.nodes.nodePosition.allowedDeviationXY"
+      support: "SUPPORTED"
+    - parameter: "order.edges.trajectory"
+      support: "NOT_SUPPORTED"
+      description: "AMR1 plans its own trajectory between nodes"
+    - parameter: "state.loads"
+      support: "SUPPORTED"
+
+  agv_actions:
+    - action_type: "dock"
+      action_scopes:
+        - "NODE"
+      blocking_types:
+        - "HARD"
+      action_description: "Align and dock to a pickup or dropoff station"
+      result_description: "Confirmation of docking completion"
+      action_parameters:
+        - parameter: "stationType"
+          value_data_type: "String"
+          description: "Station type: storagePickup | labAutoDropoff"
+          is_optional: false
+
+    - action_type: "undock"
+      action_scopes:
+        - "NODE"
+      blocking_types:
+        - "HARD"
+      action_description: "Disengage from docking station and back out"
+      result_description: "Confirmation of undock completion"
+      action_parameters:
+        - parameter: "stationType"
+          value_data_type: "String"
+          description: "Station type: storagePickup | labAutoDropoff"
+          is_optional: false
+
+    - action_type: "pick"
+      action_scopes:
+        - "NODE"
+      blocking_types:
+        - "HARD"
+      action_description: "Pick up a storage cart from a docked station"
+      result_description: "Load ID of the picked storage cart"
+      action_parameters:
+        - parameter: "stationType"
+          value_data_type: "String"
+          description: "Type of pick station"
+          is_optional: false
+        - parameter: "loadType"
+          value_data_type: "String"
+          description: "Type of load (e.g. STORAGE_CART)"
+          is_optional: false
+        - parameter: "loadId"
+          value_data_type: "String"
+          description: "Unique load identifier"
+          is_optional: true
+
+    - action_type: "drop"
+      action_scopes:
+        - "NODE"
+      blocking_types:
+        - "HARD"
+      action_description: "Drop a storage cart at a docked station"
+      result_description: "Confirmation of cart handoff"
+      action_parameters:
+        - parameter: "stationType"
+          value_data_type: "String"
+          description: "Type of dropoff station"
+          is_optional: false
+        - parameter: "loadType"
+          value_data_type: "String"
+          description: "Type of load (e.g. STORAGE_CART)"
+          is_optional: false
+
+    - action_type: "pauseOrder"
+      action_scopes:
+        - "INSTANT"
+      blocking_types:
+        - "HARD"
+      action_description: "Pause current order execution immediately"
+
+    - action_type: "resumeOrder"
+      action_scopes:
+        - "INSTANT"
+      blocking_types:
+        - "HARD"
+      action_description: "Resume paused order execution"
+
+    - action_type: "startCharging"
+      action_scopes:
+        - "INSTANT"
+        - "NODE"
+      blocking_types:
+        - "SOFT"
+      action_description: "Initiate contact charging at Reeman-ChargingPoint-01"
+      action_parameters:
+        - parameter: "chargeType"
+          value_data_type: "String"
+          description: "Charging method: contactCharging"
+          is_optional: false
+
+    - action_type: "beep"
+      action_scopes:
+        - "INSTANT"
+      blocking_types:
+        - "NONE"
+      action_description: "Sound audible warning beep"
+      action_parameters:
+        - parameter: "beepDuration"
+          value_data_type: "String"
+          description: "Duration in milliseconds"
+          is_optional: false
+
+    - action_type: "flashLight"
+      action_scopes:
+        - "INSTANT"
+      blocking_types:
+        - "NONE"
+      action_description: "Flash warning indicator lights"
+      action_parameters:
+        - parameter: "flashDuration"
+          value_data_type: "String"
+          description: "Duration in milliseconds"
+          is_optional: false
+        - parameter: "color"
+          value_data_type: "String"
+          description: "Light color: yellow | red | blue"
+          is_optional: false
+
+agv_geometry:
+  wheel_definitions:
+    - wheel_position: "leftDrive"
+      wheel_type: "DRIVE"
+      x: 0.0
+      y: 0.25
+      theta: 0.0
+      is_active_driven: true
+      is_active_steered: false
+      diameter: 0.15
+      width: 0.06
+    - wheel_position: "rightDrive"
+      wheel_type: "DRIVE"
+      x: 0.0
+      y: -0.25
+      theta: 0.0
+      is_active_driven: true
+      is_active_steered: false
+      diameter: 0.15
+      width: 0.06
+    - wheel_position: "frontCaster"
+      wheel_type: "CASTER"
+      x: 0.40
+      y: 0.0
+      theta: 0.0
+      is_active_driven: false
+      is_active_steered: false
+      diameter: 0.10
+      width: 0.04
+
+  envelopes2d:
+    - set_id: "unloaded"
+      polygon_points:
+        - x: 0.50
+          y: 0.28
+        - x: -0.50
+          y: 0.28
+        - x: -0.50
+          y: -0.28
+        - x: 0.50
+          y: -0.28
+
+    - set_id: "loaded_storage_cart"
+      polygon_points:
+        - x: 0.70
+          y: 0.40
+        - x: -0.70
+          y: 0.40
+        - x: -0.70
+          y: -0.40
+        - x: 0.70
+          y: -0.40
+
+load_specification:
+  load_positions:
+    - "carrier_platform"
+  load_sets:
+    - set_name: "STORAGE_CART"
+      load_type: "STORAGE_CART"
+      load_positions:
+        - "carrier_platform"
+      max_weight: 100.0
+      min_load_handling_height: 0.0
+      max_load_handling_height: 0.10
+
+localization_parameters: "SLAM-based with reflector enhancement; map_id must match blue_ocean_floor_1."

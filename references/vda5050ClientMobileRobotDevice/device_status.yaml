@@ -1,0 +1,218 @@
+# DeviceStatus — combined snapshot of one AGV's State + Connection + Factsheet.
+#
+# Topic:     /<topic_namespace>/<manufacturer>/<serial_number>/device_status
+# QoS:       RELIABLE + TRANSIENT_LOCAL (latched)
+# Direction: master -> downstream consumers (RES, MAPF, dashboards)
+#
+# Published on every State/Connection/Factsheet arrival from the AGV.
+# Bounded arrays (<=1) express an idiomatic ROS2 optional:
+#   - empty [] = not yet received from AGV
+#   - one element = current cached value
+#
+# Cadence: dominated by State (~1 Hz active, 30 s heartbeat).
+
+---
+# UseCase 1a: Full snapshot — AMR1-Reeman transiting on E2 with storage cart
+# (pickup complete; halfway to LabAuto-Dropoff-PreDock-01 at position (7.0, 4.3))
+manufacturer: "Reeman"
+serial_number: "AMR1"
+stamp:
+  sec: 1748419515
+  nanosec: 0
+
+state:
+  - header:
+      header_id: 55
+      timestamp: "2026-05-21T08:05:15.00Z"
+      version: "2.0.0"
+      manufacturer: "Reeman"
+      serial_number: "AMR1"
+    order_id: "order-uc1a-2026-001"
+    order_update_id: 0
+    last_node_id: "Storage-Pickup-Dock-01"
+    last_node_sequence_id: 2
+    node_states:
+      - node_id: "LabAuto-Dropoff-PreDock-01"
+        sequence_id: 4
+        released: true
+      - node_id: "LabAuto-Dropoff-Dock-01"
+        sequence_id: 6
+        released: true
+      - node_id: "Reeman-ChargingPoint-01"
+        sequence_id: 8
+        released: true
+    edge_states:
+      - edge_id: "E2"
+        sequence_id: 3
+        released: true
+      - edge_id: "E3"
+        sequence_id: 5
+        released: true
+      - edge_id: "E4"
+        sequence_id: 7
+        released: true
+    agv_position:
+      position_initialized: true
+      localization_score: 0.97
+      x: 7.0
+      y: 4.3
+      theta: 0.08
+      map_id: "blue_ocean_floor_1"
+    velocity:
+      vx: 0.98
+      vy: 0.05
+      omega: 0.01
+    loads:
+      - load_id: "cart-uc1a-001"
+        load_type: "STORAGE_CART"
+        load_position: "carrier_platform"
+        weight: 45.0
+    driving: true
+    paused: false
+    new_base_request: false
+    action_states:
+      - action_id: "act-dock-pickup-001"
+        action_type: "dock"
+        action_status: "FINISHED"
+        result_description: "Docked at Storage-Pickup-Dock-01"
+      - action_id: "act-pick-001"
+        action_type: "pick"
+        action_status: "FINISHED"
+        result_description: "Storage cart cart-uc1a-001 picked successfully"
+      - action_id: "act-undock-pickup-001"
+        action_type: "undock"
+        action_status: "FINISHED"
+        result_description: "Undocked from Storage-Pickup-Dock-01"
+    battery_state:
+      battery_charge: 81.5
+      battery_voltage: 25.0
+      battery_health: 98
+      charging: false
+      reach: 19200
+    operating_mode: "AUTOMATIC"
+    errors: []
+    safety_state:
+      e_stop: "NONE"
+      field_violation: false
+
+connection:
+  - header:
+      header_id: 1
+      timestamp: "2026-05-21T07:59:55.00Z"
+      version: "2.0.0"
+      manufacturer: "Reeman"
+      serial_number: "AMR1"
+    connection_state: "ONLINE"
+
+factsheet:
+  - header:
+      header_id: 1
+      timestamp: "2026-05-21T07:59:56.00Z"
+      version: "2.0.0"
+      manufacturer: "Reeman"
+      serial_number: "AMR1"
+    type_specification:
+      series_name: "Reeman AMR-Series"
+      agv_kinematic: "DIFF"
+      agv_class: "CARRIER"
+      max_load_mass: 100.0
+      localization_types: ["NATURAL", "REFLECTOR"]
+      navigation_types: ["AUTONOMOUS"]
+    physical_parameters:
+      speed_min: 0.05
+      speed_max: 1.2
+      acceleration_max: 0.5
+      deceleration_max: 0.8
+      height_min: 0.20
+      height_max: 0.40
+      width: 0.55
+      length: 0.90
+    protocol_limits:
+      max_string_lens:
+        msg_len: 65535
+        id_len: 128
+      max_array_lens:
+        order_nodes: 50
+        order_edges: 50
+      timing:
+        min_order_interval: 0.5
+        min_state_interval: 1.0
+    protocol_features:
+      optional_parameters: []
+      agv_actions:
+        - action_type: "dock"
+          action_scopes: ["NODE"]
+        - action_type: "undock"
+          action_scopes: ["NODE"]
+        - action_type: "pick"
+          action_scopes: ["NODE"]
+        - action_type: "drop"
+          action_scopes: ["NODE"]
+        - action_type: "pauseOrder"
+          action_scopes: ["INSTANT"]
+        - action_type: "resumeOrder"
+          action_scopes: ["INSTANT"]
+        - action_type: "startCharging"
+          action_scopes: ["INSTANT", "NODE"]
+    agv_geometry:
+      envelopes2d:
+        - set_id: "unloaded"
+          polygon_points:
+            - x: 0.50
+              y: 0.28
+            - x: -0.50
+              y: 0.28
+            - x: -0.50
+              y: -0.28
+            - x: 0.50
+              y: -0.28
+        - set_id: "loaded_storage_cart"
+          polygon_points:
+            - x: 0.70
+              y: 0.40
+            - x: -0.70
+              y: 0.40
+            - x: -0.70
+              y: -0.40
+            - x: 0.70
+              y: -0.40
+    load_specification:
+      load_positions: ["carrier_platform"]
+
+state_received_at:
+  - sec: 1748419515
+    nanosec: 0
+
+connection_received_at:
+  - sec: 1748419195
+    nanosec: 0
+
+factsheet_received_at:
+  - sec: 1748419196
+    nanosec: 300000000
+
+---
+# Example 2: Partial snapshot — AMR1-Reeman just connected, factsheet not yet received
+manufacturer: "Reeman"
+serial_number: "AMR1"
+stamp:
+  sec: 1748419196
+  nanosec: 0
+
+state: []               # not yet received
+connection:
+  - header:
+      header_id: 1
+      timestamp: "2026-05-21T07:59:55.00Z"
+      version: "2.0.0"
+      manufacturer: "Reeman"
+      serial_number: "AMR1"
+    connection_state: "ONLINE"
+
+factsheet: []           # not yet received
+
+state_received_at: []
+connection_received_at:
+  - sec: 1748419195
+    nanosec: 0
+factsheet_received_at: []

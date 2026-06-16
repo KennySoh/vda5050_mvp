@@ -1,0 +1,335 @@
+# State — AGV status published by the AGV (~1 Hz active, 30 s heartbeat).
+#
+# Topic (MQTT): <manufacturer>/<serialNumber>/state
+# Topic (ROS2): /<topic_namespace>/<manufacturer>/<serial_number>/state
+# Direction:   AGV -> MQTT broker -> master
+#
+# operating_mode: AUTOMATIC | SEMIAUTOMATIC | MANUAL | SERVICE | TEACHIN
+# e_stop values:  AUTOACK | MANUAL | REMOTE | NONE
+
+---
+# UseCase 1a — Step 1: AMR1-Reeman driving on E1, approaching Storage-Pickup-Dock-01
+# (departed Storage-Pickup-PreDock-01, 0.5 m into the 1.5 m docking approach)
+header:
+  header_id: 10
+  timestamp: "2026-05-21T08:01:05.00Z"
+  version: "2.0.0"
+  manufacturer: "Reeman"
+  serial_number: "AMR1"
+
+order_id: "order-uc1a-2026-001"
+order_update_id: 0
+last_node_id: "Storage-Pickup-PreDock-01"
+last_node_sequence_id: 0
+
+node_states:
+  - node_id: "Storage-Pickup-Dock-01"
+    sequence_id: 2
+    released: true
+    node_position:
+      x: 2.0
+      y: 3.5
+      theta: -1.5708
+      map_id: "blue_ocean_floor_1"
+
+  - node_id: "LabAuto-Dropoff-PreDock-01"
+    sequence_id: 4
+    released: true
+    node_position:
+      x: 12.0
+      y: 5.0
+      theta: 1.5708
+      map_id: "blue_ocean_floor_1"
+
+  - node_id: "LabAuto-Dropoff-Dock-01"
+    sequence_id: 6
+    released: true
+    node_position:
+      x: 12.0
+      y: 6.5
+      theta: 1.5708
+      map_id: "blue_ocean_floor_1"
+
+  - node_id: "Reeman-ChargingPoint-01"
+    sequence_id: 8
+    released: true
+    node_position:
+      x: 7.0
+      y: 1.0
+      theta: 0.0
+      map_id: "blue_ocean_floor_1"
+
+edge_states:
+  - edge_id: "E1"
+    sequence_id: 1
+    released: true
+
+  - edge_id: "E2"
+    sequence_id: 3
+    released: true
+
+  - edge_id: "E3"
+    sequence_id: 5
+    released: true
+
+  - edge_id: "E4"
+    sequence_id: 7
+    released: true
+
+agv_position:
+  position_initialized: true
+  localization_score: 0.98
+  deviation_range: 0.04
+  x: 2.0
+  y: 4.5
+  theta: -1.5708
+  map_id: "blue_ocean_floor_1"
+
+velocity:
+  vx: -0.5                     # moving south at docking speed
+  vy: 0.0
+  omega: 0.0
+
+loads: []
+
+driving: true
+paused: false
+new_base_request: false
+distance_since_last_node: 0.5
+
+action_states: []
+
+battery_state:
+  battery_charge: 85.0
+  battery_voltage: 25.2
+  battery_health: 98
+  charging: false
+  reach: 20000
+
+operating_mode: "AUTOMATIC"
+
+errors: []
+
+safety_state:
+  e_stop: "NONE"
+  field_violation: false
+
+---
+# UseCase 1a — Step 2: AMR1-Reeman at Storage-Pickup-Dock-01 executing undock after pick
+# (dock FINISHED, pick FINISHED, undock RUNNING — cart now on carrier_platform)
+header:
+  header_id: 28
+  timestamp: "2026-05-21T08:03:05.00Z"
+  version: "2.0.0"
+  manufacturer: "Reeman"
+  serial_number: "AMR1"
+
+order_id: "order-uc1a-2026-001"
+order_update_id: 0
+last_node_id: "Storage-Pickup-Dock-01"
+last_node_sequence_id: 2
+
+node_states:
+  - node_id: "LabAuto-Dropoff-PreDock-01"
+    sequence_id: 4
+    released: true
+    node_position:
+      x: 12.0
+      y: 5.0
+      theta: 1.5708
+      map_id: "blue_ocean_floor_1"
+
+  - node_id: "LabAuto-Dropoff-Dock-01"
+    sequence_id: 6
+    released: true
+    node_position:
+      x: 12.0
+      y: 6.5
+      theta: 1.5708
+      map_id: "blue_ocean_floor_1"
+
+  - node_id: "Reeman-ChargingPoint-01"
+    sequence_id: 8
+    released: true
+    node_position:
+      x: 7.0
+      y: 1.0
+      theta: 0.0
+      map_id: "blue_ocean_floor_1"
+
+edge_states:
+  - edge_id: "E2"
+    sequence_id: 3
+    released: true
+
+  - edge_id: "E3"
+    sequence_id: 5
+    released: true
+
+  - edge_id: "E4"
+    sequence_id: 7
+    released: true
+
+agv_position:
+  position_initialized: true
+  localization_score: 0.99
+  deviation_range: 0.02
+  x: 2.0
+  y: 3.5
+  theta: -1.5708
+  map_id: "blue_ocean_floor_1"
+
+velocity:
+  vx: 0.0
+  vy: 0.0
+  omega: 0.0
+
+loads:
+  - load_id: "cart-uc1a-001"
+    load_type: "STORAGE_CART"
+    load_position: "carrier_platform"
+    weight: 45.0
+
+driving: false
+paused: false
+new_base_request: false
+distance_since_last_node: 0
+
+action_states:
+  - action_id: "act-dock-pickup-001"
+    action_type: "dock"
+    action_status: "FINISHED"
+    result_description: "Docked at Storage-Pickup-Dock-01"
+  - action_id: "act-pick-001"
+    action_type: "pick"
+    action_status: "FINISHED"
+    result_description: "Storage cart cart-uc1a-001 picked successfully"
+  - action_id: "act-undock-pickup-001"
+    action_type: "undock"
+    action_status: "RUNNING"
+    result_description: ""
+
+battery_state:
+  battery_charge: 83.2
+  battery_voltage: 25.1
+  battery_health: 98
+  charging: false
+  reach: 19600
+
+operating_mode: "AUTOMATIC"
+
+errors: []
+
+safety_state:
+  e_stop: "NONE"
+  field_violation: false
+
+---
+# UseCase 1a — Step 3: AMR1-Reeman on E2 transiting to LabAuto-Dropoff-PreDock-01 with cart
+# (pickup complete, approximately halfway across the floor at (7.0, 4.3))
+header:
+  header_id: 55
+  timestamp: "2026-05-21T08:05:15.00Z"
+  version: "2.0.0"
+  manufacturer: "Reeman"
+  serial_number: "AMR1"
+
+order_id: "order-uc1a-2026-001"
+order_update_id: 0
+last_node_id: "Storage-Pickup-Dock-01"
+last_node_sequence_id: 2
+
+node_states:
+  - node_id: "LabAuto-Dropoff-PreDock-01"
+    sequence_id: 4
+    released: true
+    node_position:
+      x: 12.0
+      y: 5.0
+      theta: 1.5708
+      map_id: "blue_ocean_floor_1"
+
+  - node_id: "LabAuto-Dropoff-Dock-01"
+    sequence_id: 6
+    released: true
+    node_position:
+      x: 12.0
+      y: 6.5
+      theta: 1.5708
+      map_id: "blue_ocean_floor_1"
+
+  - node_id: "Reeman-ChargingPoint-01"
+    sequence_id: 8
+    released: true
+    node_position:
+      x: 7.0
+      y: 1.0
+      theta: 0.0
+      map_id: "blue_ocean_floor_1"
+
+edge_states:
+  - edge_id: "E2"
+    sequence_id: 3
+    released: true
+
+  - edge_id: "E3"
+    sequence_id: 5
+    released: true
+
+  - edge_id: "E4"
+    sequence_id: 7
+    released: true
+
+agv_position:
+  position_initialized: true
+  localization_score: 0.97
+  deviation_range: 0.05
+  x: 7.0
+  y: 4.3
+  theta: 0.08
+  map_id: "blue_ocean_floor_1"
+
+velocity:
+  vx: 0.98
+  vy: 0.05
+  omega: 0.01
+
+loads:
+  - load_id: "cart-uc1a-001"
+    load_type: "STORAGE_CART"
+    load_position: "carrier_platform"
+    weight: 45.0
+
+driving: true
+paused: false
+new_base_request: false
+distance_since_last_node: 5.08
+
+action_states:
+  - action_id: "act-dock-pickup-001"
+    action_type: "dock"
+    action_status: "FINISHED"
+    result_description: "Docked at Storage-Pickup-Dock-01"
+  - action_id: "act-pick-001"
+    action_type: "pick"
+    action_status: "FINISHED"
+    result_description: "Storage cart cart-uc1a-001 picked successfully"
+  - action_id: "act-undock-pickup-001"
+    action_type: "undock"
+    action_status: "FINISHED"
+    result_description: "Undocked from Storage-Pickup-Dock-01"
+
+battery_state:
+  battery_charge: 81.5
+  battery_voltage: 25.0
+  battery_health: 98
+  charging: false
+  reach: 19200
+
+operating_mode: "AUTOMATIC"
+
+errors: []
+
+safety_state:
+  e_stop: "NONE"
+  field_violation: false

@@ -1,0 +1,55 @@
+# FleetRoster — authoritative set of AGVs the master should track.
+#
+# Topic:     /<topic_namespace>/fleet_roster
+# QoS:       RELIABLE + TRANSIENT_LOCAL (latched)
+# Direction: DM (RMF Device Manager) -> master
+#
+# Semantics: full-state, not delta. Every message carries the complete desired
+# roster. The master diffs against its currently-onboarded set:
+#   present here, absent locally  → onboard_agv(...)
+#   absent here, present locally  → offboard_agv(...)
+#   in both                       → no-op
+#
+# Publishers MUST send the complete roster every time.
+
+---
+# UseCase 1a: Single Reeman AMR1 onboarded for material handling & inventory replenishment
+stamp:
+  sec: 1748419200
+  nanosec: 0
+roster_id: 1
+publisher_id: "rmf_device_manager"
+
+agvs:
+  - manufacturer: "Reeman"
+    serial_number: "AMR1"
+    max_queue_size: 10          # 0 = use master default
+    drop_oldest: true
+
+---
+# Example 2: Fleet expanded — Reeman AMR1 + AMR2
+stamp:
+  sec: 1748421000
+  nanosec: 0
+roster_id: 2
+publisher_id: "rmf_device_manager"
+
+agvs:
+  - manufacturer: "Reeman"
+    serial_number: "AMR1"
+    max_queue_size: 10
+    drop_oldest: true
+
+  - manufacturer: "Reeman"
+    serial_number: "AMR2"
+    max_queue_size: 10
+    drop_oldest: true
+
+---
+# Example 3: Empty roster — offboard everything (maintenance mode)
+stamp:
+  sec: 1748422800
+  nanosec: 0
+roster_id: 3
+publisher_id: "rmf_device_manager"
+agvs: []

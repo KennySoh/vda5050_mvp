@@ -1,0 +1,297 @@
+# AssignOrderRequest — async order dispatch from RES/MAPF/FMS to the master.
+#
+# Topic:     /<topic_namespace>/assign_order_request
+# QoS:       RELIABLE + VOLATILE, history KEEP_LAST(10)
+# Direction: caller -> master
+#
+# The master validates and publishes the outcome on `assignment_results`.
+# Results are correlated by `assignment_id`.
+
+---
+# UseCase 1a: Material Handling & Inventory Replenishment
+# AMR1-Reeman: Storage pickup → LabAuto dropoff → Charging
+#
+# Node/Edge sequence (sequence_id):
+#   0  N1  Storage-Pickup-PreDock-01   (approach waypoint, no action)
+#   1  E1  → Storage-Pickup-Dock-01    (slow docking approach, 1.5 m)
+#   2  N2  Storage-Pickup-Dock-01      dock + pick + undock
+#   3  E2  → LabAuto-Dropoff-PreDock-01 (transit with cart, 10.1 m)
+#   4  N3  LabAuto-Dropoff-PreDock-01  (approach waypoint, no action)
+#   5  E3  → LabAuto-Dropoff-Dock-01   (slow docking approach, 1.5 m)
+#   6  N4  LabAuto-Dropoff-Dock-01     dock + drop + undock
+#   7  E4  → Reeman-ChargingPoint-01   (return to charge, 7.4 m)
+#   8  N5  Reeman-ChargingPoint-01     startCharging
+assignment_id: "asgn-uc1a-reeman-amr1-001"
+manufacturer: "Reeman"
+serial_number: "AMR1"
+
+order:
+  header:
+    header_id: 1
+    timestamp: "2026-05-21T08:00:00.00Z"
+    version: "2.0.0"
+    manufacturer: "Reeman"
+    serial_number: "AMR1"
+  order_id: "order-uc1a-2026-001"
+  order_update_id: 0
+  zone_set_id: "zone-blue-ocean"
+
+  nodes:
+    - node_id: "Storage-Pickup-PreDock-01"
+      sequence_id: 0
+      released: true
+      node_position:
+        x: 2.0
+        y: 5.0
+        theta: -1.5708          # facing south toward dock
+        map_id: "blue_ocean_floor_1"
+        allowed_deviation_x_y: 0.15
+        allowed_deviation_theta: 0.1
+      actions: []
+
+    - node_id: "Storage-Pickup-Dock-01"
+      sequence_id: 2
+      released: true
+      node_position:
+        x: 2.0
+        y: 3.5
+        theta: -1.5708
+        map_id: "blue_ocean_floor_1"
+        allowed_deviation_x_y: 0.05
+        allowed_deviation_theta: 0.05
+      actions:
+        - action_type: "dock"
+          action_id: "act-dock-pickup-001"
+          blocking_type: "HARD"
+          action_description: "Dock into Storage-Pickup-Dock-01"
+          action_parameters:
+            - key: "stationType"
+              value: "storagePickup"
+        - action_type: "pick"
+          action_id: "act-pick-001"
+          blocking_type: "HARD"
+          action_description: "Pick up storage cart at Storage-Pickup-Dock-01"
+          action_parameters:
+            - key: "stationType"
+              value: "storagePickup"
+            - key: "loadType"
+              value: "STORAGE_CART"
+            - key: "loadId"
+              value: "cart-uc1a-001"
+        - action_type: "undock"
+          action_id: "act-undock-pickup-001"
+          blocking_type: "HARD"
+          action_description: "Undock from Storage-Pickup-Dock-01 with cart"
+          action_parameters:
+            - key: "stationType"
+              value: "storagePickup"
+
+    - node_id: "LabAuto-Dropoff-PreDock-01"
+      sequence_id: 4
+      released: true
+      node_position:
+        x: 12.0
+        y: 5.0
+        theta: 1.5708           # facing north toward dock
+        map_id: "blue_ocean_floor_1"
+        allowed_deviation_x_y: 0.15
+        allowed_deviation_theta: 0.1
+      actions: []
+
+    - node_id: "LabAuto-Dropoff-Dock-01"
+      sequence_id: 6
+      released: true
+      node_position:
+        x: 12.0
+        y: 6.5
+        theta: 1.5708
+        map_id: "blue_ocean_floor_1"
+        allowed_deviation_x_y: 0.05
+        allowed_deviation_theta: 0.05
+      actions:
+        - action_type: "dock"
+          action_id: "act-dock-dropoff-001"
+          blocking_type: "HARD"
+          action_description: "Dock into LabAuto-Dropoff-Dock-01"
+          action_parameters:
+            - key: "stationType"
+              value: "labAutoDropoff"
+        - action_type: "drop"
+          action_id: "act-drop-001"
+          blocking_type: "HARD"
+          action_description: "Drop storage cart at LabAuto-Dropoff-Dock-01"
+          action_parameters:
+            - key: "stationType"
+              value: "labAutoDropoff"
+            - key: "loadType"
+              value: "STORAGE_CART"
+        - action_type: "undock"
+          action_id: "act-undock-dropoff-001"
+          blocking_type: "HARD"
+          action_description: "Undock from LabAuto-Dropoff-Dock-01"
+          action_parameters:
+            - key: "stationType"
+              value: "labAutoDropoff"
+
+    - node_id: "Reeman-ChargingPoint-01"
+      sequence_id: 8
+      released: true
+      node_position:
+        x: 7.0
+        y: 1.0
+        theta: 0.0
+        map_id: "blue_ocean_floor_1"
+        allowed_deviation_x_y: 0.1
+        allowed_deviation_theta: 0.1
+      actions:
+        - action_type: "startCharging"
+          action_id: "act-charge-001"
+          blocking_type: "SOFT"
+          action_description: "Initiate charging at Reeman-ChargingPoint-01"
+          action_parameters:
+            - key: "chargeType"
+              value: "contactCharging"
+
+  edges:
+    - edge_id: "E1"
+      sequence_id: 1
+      start_node_id: "Storage-Pickup-PreDock-01"
+      end_node_id: "Storage-Pickup-Dock-01"
+      released: true
+      max_speed: 0.5            # slow docking approach
+      max_height: 2.0
+      rotation_allowed: false
+      length: 1.5
+      actions: []
+
+    - edge_id: "E2"
+      sequence_id: 3
+      start_node_id: "Storage-Pickup-Dock-01"
+      end_node_id: "LabAuto-Dropoff-PreDock-01"
+      released: true
+      max_speed: 1.0            # reduced speed while carrying cart
+      max_height: 2.0
+      rotation_allowed: true
+      length: 10.11
+      actions: []
+
+    - edge_id: "E3"
+      sequence_id: 5
+      start_node_id: "LabAuto-Dropoff-PreDock-01"
+      end_node_id: "LabAuto-Dropoff-Dock-01"
+      released: true
+      max_speed: 0.5            # slow docking approach
+      max_height: 2.0
+      rotation_allowed: false
+      length: 1.5
+      actions: []
+
+    - edge_id: "E4"
+      sequence_id: 7
+      start_node_id: "LabAuto-Dropoff-Dock-01"
+      end_node_id: "Reeman-ChargingPoint-01"
+      released: true
+      max_speed: 1.2
+      max_height: 2.0
+      rotation_allowed: true
+      length: 7.43
+      actions: []
+
+stamp:
+  sec: 1748419200
+  nanosec: 0
+
+---
+# Example 2: Horizon-included order — base N1→N2 released, N3 horizon only
+# (Stitch scenario: downstream legs confirmed after AMR1 clears pickup dock)
+assignment_id: "asgn-uc1a-reeman-amr1-002"
+manufacturer: "Reeman"
+serial_number: "AMR1"
+
+order:
+  header:
+    header_id: 2
+    timestamp: "2026-05-21T08:30:00.00Z"
+    version: "2.0.0"
+    manufacturer: "Reeman"
+    serial_number: "AMR1"
+  order_id: "order-uc1a-2026-002"
+  order_update_id: 0
+  zone_set_id: "zone-blue-ocean"
+
+  nodes:
+    - node_id: "Storage-Pickup-PreDock-01"
+      sequence_id: 0
+      released: true
+      node_position:
+        x: 2.0
+        y: 5.0
+        theta: -1.5708
+        map_id: "blue_ocean_floor_1"
+      actions: []
+
+    - node_id: "Storage-Pickup-Dock-01"
+      sequence_id: 2
+      released: true
+      node_position:
+        x: 2.0
+        y: 3.5
+        theta: -1.5708
+        map_id: "blue_ocean_floor_1"
+      actions:
+        - action_type: "dock"
+          action_id: "act-dock-pickup-002"
+          blocking_type: "HARD"
+          action_description: "Dock into Storage-Pickup-Dock-01"
+          action_parameters:
+            - key: "stationType"
+              value: "storagePickup"
+        - action_type: "pick"
+          action_id: "act-pick-002"
+          blocking_type: "HARD"
+          action_description: "Pick up storage cart"
+          action_parameters:
+            - key: "stationType"
+              value: "storagePickup"
+            - key: "loadType"
+              value: "STORAGE_CART"
+            - key: "loadId"
+              value: "cart-uc1a-002"
+        - action_type: "undock"
+          action_id: "act-undock-pickup-002"
+          blocking_type: "HARD"
+          action_description: "Undock with cart"
+          action_parameters:
+            - key: "stationType"
+              value: "storagePickup"
+
+    - node_id: "LabAuto-Dropoff-PreDock-01"
+      sequence_id: 4
+      released: false           # horizon — dropoff lane availability not yet confirmed
+      node_position:
+        x: 12.0
+        y: 5.0
+        theta: 1.5708
+        map_id: "blue_ocean_floor_1"
+      actions: []
+
+  edges:
+    - edge_id: "E1"
+      sequence_id: 1
+      start_node_id: "Storage-Pickup-PreDock-01"
+      end_node_id: "Storage-Pickup-Dock-01"
+      released: true
+      max_speed: 0.5
+      actions: []
+
+    - edge_id: "E2"
+      sequence_id: 3
+      start_node_id: "Storage-Pickup-Dock-01"
+      end_node_id: "LabAuto-Dropoff-PreDock-01"
+      released: false           # horizon
+      max_speed: 1.0
+      actions: []
+
+stamp:
+  sec: 1748421000
+  nanosec: 0

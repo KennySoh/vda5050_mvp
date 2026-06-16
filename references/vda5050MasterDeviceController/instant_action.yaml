@@ -1,0 +1,92 @@
+# InstantActions — actions to be executed by the AGV immediately upon receipt.
+#
+# Topic (MQTT): <manufacturer>/<serialNumber>/instantActions
+# Topic (ROS2): /<topic_namespace>/<manufacturer>/<serial_number>/instant_actions
+# Direction:    master -> AGV
+#
+# Instant actions are not part of a regular order. They execute immediately
+# and in parallel to ongoing order execution (unless blocking_type = HARD).
+# Action states are reported back in the AGV's State message action_states[].
+#
+# blocking_type values: NONE | SOFT | HARD
+#   NONE — parallel with movement and other actions
+#   SOFT — parallel with other actions, but not while moving
+#   HARD — no other action can run concurrently
+
+---
+# UseCase 1a: Emergency pause — obstacle detected while AMR1-Reeman approaches pickup dock
+header:
+  header_id: 1
+  timestamp: "2026-05-21T08:01:20.00Z"
+  version: "2.0.0"
+  manufacturer: "Reeman"
+  serial_number: "AMR1"
+
+actions:
+  - action_type: "pauseOrder"
+    action_id: "ia-pause-001"
+    blocking_type: "HARD"
+    action_description: "Pause order execution — obstacle on E1 approach to Storage-Pickup-Dock-01"
+    action_parameters: []
+
+---
+# Example 2: Resume after obstacle cleared
+header:
+  header_id: 2
+  timestamp: "2026-05-21T08:01:45.00Z"
+  version: "2.0.0"
+  manufacturer: "Reeman"
+  serial_number: "AMR1"
+
+actions:
+  - action_type: "resumeOrder"
+    action_id: "ia-resume-001"
+    blocking_type: "HARD"
+    action_description: "Resume order execution — obstacle cleared on E1"
+    action_parameters: []
+
+---
+# Example 3: Manual charging trigger — operator initiates charge at Reeman-ChargingPoint-01
+header:
+  header_id: 3
+  timestamp: "2026-05-21T08:10:00.00Z"
+  version: "2.0.0"
+  manufacturer: "Reeman"
+  serial_number: "AMR1"
+
+actions:
+  - action_type: "startCharging"
+    action_id: "ia-charge-001"
+    blocking_type: "SOFT"
+    action_description: "Initiate charging at Reeman-ChargingPoint-01"
+    action_parameters:
+      - key: "chargeType"
+        value: "contactCharging"
+
+---
+# Example 4: Warning signal — blink lights and beep while AMR1 carries cart in transit
+header:
+  header_id: 4
+  timestamp: "2026-05-21T08:04:30.00Z"
+  version: "2.0.0"
+  manufacturer: "Reeman"
+  serial_number: "AMR1"
+
+actions:
+  - action_type: "beep"
+    action_id: "ia-beep-001"
+    blocking_type: "NONE"
+    action_description: "Sound warning beep — approaching pedestrian crossing"
+    action_parameters:
+      - key: "beepDuration"
+        value: "500"
+
+  - action_type: "flashLight"
+    action_id: "ia-light-001"
+    blocking_type: "NONE"
+    action_description: "Flash yellow warning light"
+    action_parameters:
+      - key: "flashDuration"
+        value: "2000"
+      - key: "color"
+        value: "yellow"

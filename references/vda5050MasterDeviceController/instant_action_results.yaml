@@ -1,0 +1,76 @@
+# InstantActionResults — master-side relay of AGV action states for instant actions.
+#
+# Topic:     /<topic_namespace>/<manufacturer>/<serial_number>/instant_action_results
+# QoS:       RELIABLE + VOLATILE
+# Direction: master -> downstream consumers (RES, dashboards)
+#
+# The master publishes this on every State arrival from the AGV when
+# action_states[] contains entries for known instant action IDs.
+# Consumers correlate by `instant_action_id` (echoed from the dispatched
+# InstantActions header_id or a caller-provided UUID).
+#
+# action_status values: WAITING | INITIALIZING | RUNNING | PAUSED | FINISHED | FAILED
+
+---
+# UseCase 1a: pauseOrder acknowledged — AMR1-Reeman decelerating to stop on E1
+manufacturer: "Reeman"
+serial_number: "AMR1"
+instant_action_id: "ia-pause-001"
+stamp:
+  sec: 1748419281
+  nanosec: 200000000
+
+action_states:
+  - action_id: "ia-pause-001"
+    action_type: "pauseOrder"
+    action_status: "RUNNING"
+    action_description: "Pause order — obstacle on E1 approach to Storage-Pickup-Dock-01"
+    result_description: ""
+
+---
+# Example 2: pauseOrder completed — AMR1-Reeman fully stopped at (2.0, 4.3)
+manufacturer: "Reeman"
+serial_number: "AMR1"
+instant_action_id: "ia-pause-001"
+stamp:
+  sec: 1748419283
+  nanosec: 800000000
+
+action_states:
+  - action_id: "ia-pause-001"
+    action_type: "pauseOrder"
+    action_status: "FINISHED"
+    action_description: "Pause order — obstacle on E1"
+    result_description: "AMR1 paused successfully at position (2.0, 4.3, theta=-1.5708)"
+
+---
+# Example 3: resumeOrder finished — AMR1-Reeman resumed toward Storage-Pickup-Dock-01
+manufacturer: "Reeman"
+serial_number: "AMR1"
+instant_action_id: "ia-resume-001"
+stamp:
+  sec: 1748419306
+  nanosec: 0
+
+action_states:
+  - action_id: "ia-resume-001"
+    action_type: "resumeOrder"
+    action_status: "FINISHED"
+    action_description: "Resume order — obstacle cleared on E1"
+    result_description: "Order resumed successfully"
+
+---
+# Example 4: startCharging failed — AMR1-Reeman not fully docked at charging point
+manufacturer: "Reeman"
+serial_number: "AMR1"
+instant_action_id: "ia-charge-001"
+stamp:
+  sec: 1748419801
+  nanosec: 500000000
+
+action_states:
+  - action_id: "ia-charge-001"
+    action_type: "startCharging"
+    action_status: "FAILED"
+    action_description: "Initiate charging at Reeman-ChargingPoint-01"
+    result_description: "No charging contact detected — AMR1 not fully docked at charging station"
